@@ -82,6 +82,40 @@ export const OPERATIONS_INSTANCE: TlsInstance = {
   owner: true,
 };
 
+/**
+ * Settings → Sign-in and security (e2e/sign-in-security.spec.ts): passkeys through Chromium's
+ * virtual authenticator and the authenticator app, on the `households` seed. Its server believes
+ * `X-Forwarded-For` from this machine (serve.mjs `--trust-proxy`), so each journey's sign-ins
+ * come from an address of their own and Better Auth's per-address sign-in limit (5 a minute)
+ * doesn't run out between journeys. Key for KEPT_E2E_INSTANCES: `signIn`.
+ */
+export const SIGN_IN_INSTANCE: Instance & { trustProxy: true } = {
+  name: 'sign-in',
+  port: 8200,
+  seed: true,
+  trustProxy: true,
+};
+
+/**
+ * Sign-in changes seen from outside (e2e/sign-in-changes.spec.ts): other devices signed out, the
+ * security notices in the mail, unlinking an outside sign-in, a location that asks for
+ * two-factor. Its server mails through the dev Mailpit (compose.dev.yaml, SMTP 1025, API 8025;
+ * serve.mjs `--mail`), and offers Google sign-in with made-up client credentials (`--google`): no
+ * Google request is ever made, unlinking needs none. Key for KEPT_E2E_INSTANCES: `signInMail`.
+ */
+export const SIGN_IN_MAIL_INSTANCE: Instance & {
+  trustProxy: true;
+  mail: true;
+  google: true;
+} = {
+  name: 'sign-in-mail',
+  port: 8201,
+  seed: true,
+  trustProxy: true,
+  mail: true,
+  google: true,
+};
+
 export const urlOf = (i: Instance & { https?: boolean }) =>
   `${i.https ? 'https' : 'http'}://localhost:${i.port}`;
 

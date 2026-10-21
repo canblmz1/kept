@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { LightMyRequestResponse } from 'fastify';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fragmentToken, jar, setCookies, type TestApp, testApp } from '../../test/app.js';
-import { enrolTotp, signUp, totp } from '../../test/auth.js';
+import { enrolTotp, nextTotp, signUp } from '../../test/auth.js';
 import { type TestDb, testDb } from '../../test/db.js';
 import { asOwner, userEmail } from '../../test/tenancy.js';
 import { ensureAccount } from '../accounts/ensure-account.js';
@@ -332,7 +332,11 @@ describe('sessions', () => {
     const user = await newUser('tfa');
     const a = await signIn(user.email);
     const b = await signIn(user.email);
-    const enabled = await auth('/two-factor/enable', { cookie: a, body: { password: PASSWORD } });
+    // Kept's route (Better Auth's own is off over HTTP), which starts it through Better Auth.
+    const enabled = await call('/api/v1/me/two-factor/enable', {
+      cookie: a,
+      body: { password: PASSWORD },
+    });
     expect(enabled.statusCode).toBe(200);
     expect((await call('/api/v1/me/sessions', { cookie: b })).statusCode).toBe(401);
     expect((await call('/api/v1/me/sessions', { cookie: jar(enabled, a) })).statusCode).toBe(200);
@@ -357,7 +361,7 @@ describe('the session gate on Kept routes', () => {
     expect(challenged.json()).toMatchObject({ twoFactorRedirect: true });
     const verified = await auth('/two-factor/verify-totp', {
       cookie: jar(challenged),
-      body: { code: totp(secret) },
+      body: { code: await nextTotp(secret, user.userId) },
     });
     expect(verified.statusCode).toBe(200);
     expect(
@@ -735,7 +739,7 @@ describe('security review follow-ups (M2, M3, M5–M8)', () => {
     });
     const verified = await auth('/two-factor/verify-totp', {
       cookie: jar(challenged),
-      body: { code: totp(secret) },
+      body: { code: await nextTotp(secret, user.userId) },
     });
     const full = jar(verified, jar(challenged));
     // The pending device confirms the new address: it is signed out with every other session.
