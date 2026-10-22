@@ -102,6 +102,9 @@ export type SignInSecurity = {
 
 // ----- me (18) -------------------------------------------------------------------------------
 
+/** A location of yours that asks for two-factor, hidden until this session proves one. */
+export type TwoFactorHiddenLocation = { locationId: string; name: string; kind: LocationKind };
+
 /** GET /api/v1/me: the signed-in person and what the shell needs about them. */
 export type Me = {
   user: {
@@ -117,6 +120,9 @@ export type Me = {
   };
   /** Proven in this session (TOTP, backup code, or a passkey with UV). */
   mfa: boolean;
+  /** Your locations that ask for two-factor and this session can't open yet (empty with `mfa`);
+   * absent from a server before 1.12.6. */
+  twoFactorHidden?: TwoFactorHiddenLocation[];
   /** Null only while it's hidden from this session (require_2fa without a second factor). */
   personalLocationId: string | null;
   /** Display preferences. `locale` is `en` or `ar`. */
@@ -247,6 +253,9 @@ export type UpdateLocationBody = {
   currency?: string;
   /** Room photos stay on their place after review (#194); deleted then by default. */
   keepRoomPhotos?: boolean;
+  /** Members need two-factor or a passkey to open the location. The owner only; turning it on
+   * needs this session to have proven a second factor (403 `mfa_required`). */
+  require2fa?: boolean;
 };
 
 /**
@@ -270,6 +279,9 @@ export type Member = {
   managedByName: string | null;
   lastActiveAt: string | null;
   twoFactorEnabled: boolean;
+  /** The authenticator app is on or a passkey is registered: what a location that requires
+   * two-factor accepts. Shown to owners and admins (and the member); false otherwise. */
+  secondFactor?: boolean;
   isYou: boolean;
   /** For PATCH's If-Match: the server answers 428 without it. */
   rowVersion: number;
