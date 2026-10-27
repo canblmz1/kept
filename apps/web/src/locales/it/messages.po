@@ -23376,9 +23376,6 @@ msgstr "Non è più qui."
 msgid "Check the highlighted cells."
 msgstr "Controlla le celle evidenziate."
 
-#: src/components/sheet/sheet-view.tsx
-msgid "Discard my change"
-msgstr "Scarta la mia modifica"
 #: src/components/app-shell.tsx
 msgid "Moving"
 msgstr "Trasloco"
@@ -27228,6 +27225,10 @@ msgstr "Homebox v0.26.1 o successivo (consigliata la v0.27.0): Collezione → St
 #: src/components/connections/token-create.tsx
 msgid "On a home network without HTTPS, the person who runs this Kept can make one on the server: kept admin token create."
 msgstr "Su una rete domestica senza HTTPS, chi gestisce questo Kept può crearne uno sul server: kept admin token create."
+
+#: src/components/import/archive-run.tsx
+msgid "Open the map"
+msgstr "Apri la mappa"
 
 #: src/components/places/contents-list.tsx
 msgid "Things: sort by"

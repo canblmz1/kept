@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Tx } from '../db/scope.js';
 import { notFound } from '../http/errors.js';
 import { locationModuleSet } from '../http/modules.js';
+import { labelPrintedSql, shownCodeSql } from '../labels/printed-sql.js';
 import { requireMembership } from '../locations/access.js';
 import { placeOrderSql, thingNameSql } from '../places/order.js';
 
@@ -60,6 +61,7 @@ export const MapViewSchema = z.object({
       id: z.uuid(),
       name: z.string(),
       shortCode: z.string().nullable(),
+      labelPrinted: z.boolean(),
       levelId: z.uuid().nullable(),
       kindKey: z.string(),
       layout: RoomLayout.nullable(),
@@ -71,6 +73,7 @@ export const MapViewSchema = z.object({
       subject: z.enum(['place', 'thing']),
       name: z.string(),
       shortCode: z.string().nullable(),
+      labelPrinted: z.boolean(),
       roomId: z.uuid(),
       parentId: z.uuid(),
       kindKey: z.string().nullable(),
@@ -85,6 +88,7 @@ export const MapViewSchema = z.object({
       id: z.uuid(),
       name: z.string(),
       shortCode: z.string().nullable(),
+      labelPrinted: z.boolean(),
       quantity: z.number(),
       parentId: z.uuid(),
       /** Its built-in type, its own or its nearest built-in parent's (D249: its shape). */
@@ -119,6 +123,7 @@ type PlaceRow = {
   kind_key: string;
   is_unplaced: boolean;
   short_code: string | null;
+  label_printed: boolean;
 };
 
 export type MapThingRow = ThingRow;
@@ -133,6 +138,7 @@ type ThingRow = {
   type_name: string | null;
   is_container: boolean;
   short_code: string | null;
+  label_printed: boolean;
   on_map: boolean;
 };
 
@@ -217,9 +223,8 @@ export function mapTree(rows: readonly PlaceRow[]): MapTree {
 export async function placeRows(client: pg.ClientBase, locationId: string): Promise<PlaceRow[]> {
   const { rows } = await client.query<PlaceRow>(
     `SELECT p.id, p.parent_id, p.name, p.kind_key, p.is_unplaced,
-            (SELECT sc.code FROM public.short_ids sc
-              WHERE sc.place_id = p.id AND sc.is_primary AND sc.state = 'assigned' LIMIT 1)
-              AS short_code
+            ${shownCodeSql('place_id', 'p.id')} AS short_code,
+            ${labelPrintedSql('place_id', 'p.id')} AS label_printed
        FROM public.places p
       WHERE p.location_id = $1 AND p.deleted_at IS NULL
       ORDER BY ${placeOrderSql('p')}`,
@@ -239,9 +244,8 @@ export async function thingRows(client: pg.ClientBase, locationId: string): Prom
             (coalesce('container' = ANY (kept.type_capabilities(t.type_id)), false)
               OR EXISTS (SELECT 1 FROM public.things c
                           WHERE c.container_id = t.id AND c.deleted_at IS NULL)) AS is_container,
-            (SELECT sc.code FROM public.short_ids sc
-              WHERE sc.thing_id = t.id AND sc.is_primary AND sc.state = 'assigned' LIMIT 1)
-              AS short_code,
+            ${shownCodeSql('thing_id', 't.id')} AS short_code,
+            ${labelPrintedSql('thing_id', 't.id')} AS label_printed,
             EXISTS (SELECT 1 FROM public.map_nodes n WHERE n.thing_id = t.id) AS on_map
        FROM public.things t
        LEFT JOIN public.types ty ON ty.id = t.type_id
@@ -467,6 +471,7 @@ export async function mapView(tx: Tx, client: pg.ClientBase, locationId: string)
       subject: 'place',
       name: p.name,
       shortCode: p.short_code,
+      labelPrinted: p.label_printed === true,
       roomId,
       parentId,
       kindKey: p.kind_key,
@@ -490,6 +495,7 @@ export async function mapView(tx: Tx, client: pg.ClientBase, locationId: string)
         subject: 'thing',
         name,
         shortCode: t.short_code,
+        labelPrinted: t.label_printed === true,
         roomId,
         parentId,
         kindKey: null,
@@ -507,6 +513,7 @@ export async function mapView(tx: Tx, client: pg.ClientBase, locationId: string)
       id: t.id,
       name,
       shortCode: t.short_code,
+      labelPrinted: t.label_printed === true,
       quantity: Number(t.quantity),
       parentId,
       typeKey: t.type_key,
@@ -526,6 +533,7 @@ export async function mapView(tx: Tx, client: pg.ClientBase, locationId: string)
         id,
         name: p.name,
         shortCode: p.short_code,
+        labelPrinted: p.label_printed === true,
         levelId,
         kindKey: p.kind_key,
         layout: roomLayout(id),

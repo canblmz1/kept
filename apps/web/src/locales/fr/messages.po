@@ -23376,9 +23376,6 @@ msgstr "Il n’est plus ici."
 msgid "Check the highlighted cells."
 msgstr "Vérifiez les cellules en surbrillance."
 
-#: src/components/sheet/sheet-view.tsx
-msgid "Discard my change"
-msgstr "Rejeter ma modification"
 #: src/components/app-shell.tsx
 msgid "Moving"
 msgstr "Déménagement"
@@ -27228,6 +27225,10 @@ msgstr "Homebox v0.26.1 ou plus récent (v0.27.0 recommandée) : Collection → 
 #: src/components/connections/token-create.tsx
 msgid "On a home network without HTTPS, the person who runs this Kept can make one on the server: kept admin token create."
 msgstr "Sur un réseau domestique sans HTTPS, la personne qui gère ce Kept peut en créer un sur le serveur : kept admin token create."
+
+#: src/components/import/archive-run.tsx
+msgid "Open the map"
+msgstr "Ouvrir la carte"
 
 #: src/components/places/contents-list.tsx
 msgid "Things: sort by"
