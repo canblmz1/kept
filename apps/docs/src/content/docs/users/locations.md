@@ -12,6 +12,12 @@ spots** ("room or spot" is Kept's word for any place), which hold **things**. A 
   spot**.
 - Lists have a search box, **+ Filter**, saved **Views**, and a **Display** button for sort order
   and grouping. Filters live in the address, so a filtered list can be bookmarked or shared.
+- **Order:** places and things read A to Z with numbers in order (Box 2 before Box 10), the same
+  in the app, offline, in exports and for AI apps. Floors keep the order they were made in: the
+  first is the ground floor on the map. On a place, **Display → Things: sort by** orders its
+  things; its places stay A to Z.
+- **The place tree** (beside the page on a computer, **All places** on a phone) shows boxes under
+  their place with how many things are in each, up to 50 a place, then **+N boxes**.
 - On a location, **Sort them** goes through Unplaced one thing at a time with a place picker.
 - A box opened from its label shows a photo grid of what's inside.
 - A location's page switches between **List**, **Grid** and **Map**: the map shows the location in

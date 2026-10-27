@@ -60,8 +60,8 @@ text). Filters narrow by location, place, type, tag and state; **Saved searches*
 set for you or a whole location. On a computer, ⌘K or Ctrl+K opens the same search from anywhere.
 ## Moving things
 
-- **Move** on a thing picks the new place. Moving into another location you belong to warns who
-  will lose sight of it.
+- **Move** on a thing picks the new place or box. Moving into another location you belong to warns
+  who will lose sight of it.
 - **The tray**: **Pick up** several things (from their menu, or by scanning), then open the
   destination and **Move here**, or **Scan destination**. The tray stays with you offline.
 - **Box check** on a box: tick what's there (with a count for "found 4 of 6"), add **Found
