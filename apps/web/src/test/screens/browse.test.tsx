@@ -859,6 +859,90 @@ describe('the place page', () => {
   });
 });
 
+describe('what a row says about a box and a type (#321)', () => {
+  const rowOf = async (listName: string, name: RegExp) =>
+    within(await list(listName)).getByRole('link', { name });
+
+  it('a box in Things here says how many things are in it, as the tree does', async () => {
+    await renderApp(`/p/${P.hallwayCloset}`);
+    await findHeading('Hallway closet');
+    expect(await rowOf('Contents of Hallway closet', /Box 3/)).toHaveTextContent(/2 things$/);
+  });
+
+  it('shows the type as a quiet line under the name, first on the line it shares', async () => {
+    await renderApp(`/loc/${IDS.home}`);
+    await findHeading('Home');
+    const hdmi = await rowOf('Contents of Home', /HDMI cable, 2 m/);
+    const type = within(hdmi).getByText('Cable').closest<HTMLElement>('[data-thing-type]');
+    // The secondary text's grey, not the label tape's amber (#271).
+    expect(type).toHaveClass('text-small', 'text-ink-2');
+    expect(type?.className).not.toMatch(/amber|tape/);
+    // First on the tape, states and path line: the row is no taller than before.
+    const line = type?.parentElement;
+    expect(line?.firstElementChild).toBe(type);
+    expect(line).toHaveTextContent(/Cable.*Office.*Desk drawer.*Cable box/);
+  });
+
+  it('shows no type line for a thing without a type', async () => {
+    await renderApp(`/t/${T.box3}`);
+    const scarves = await rowOf('Contents of Box 3', /Winter scarves/);
+    expect(scarves.querySelector('[data-thing-type]')).toBeNull();
+  });
+
+  it('a Large tile shows the type too', async () => {
+    await renderApp(`/p/${P.deskDrawer}?view=grid&size=large`);
+    const tile = await rowOf('Contents of Desk drawer', /Cable box/);
+    expect(within(tile).getByText('Box / bin').closest('[data-thing-type]')).toHaveClass(
+      'text-ink-2',
+    );
+  });
+
+  it('a Large tile of a location says the type and where on one line', async () => {
+    await renderApp(`/loc/${IDS.home}?view=grid&size=large`);
+    const tile = await rowOf('Contents of Home', /HDMI cable, 2 m/);
+    const type = tile.querySelector('[data-thing-type]');
+    expect(type).toHaveTextContent(/^Cable/);
+    // Type first, then the path, in the one wrapping line.
+    expect(type?.parentElement?.firstElementChild).toBe(type);
+    expect(type?.parentElement).toHaveTextContent(/^Cable.*Office › Desk drawer › Cable box$/);
+  });
+
+  it('a Medium tile stays the name and its tape', async () => {
+    await renderApp(`/p/${P.deskDrawer}?view=grid`);
+    const medium = await rowOf('Contents of Desk drawer', /Cable box/);
+    expect(within(medium).queryByText('Box / bin')).toBeNull();
+  });
+
+  it('names a built-in type in the reader’s language, right to left', async () => {
+    await renderApp(`/p/${P.familyKitchen}`, { locale: 'ar' });
+    await findHeading('المطبخ');
+    const fridge = await rowOf('محتويات «المطبخ»', /ثلاجة توشيبا/);
+    expect(within(fridge).getByText('جهاز منزلي كبير')).toBeInTheDocument();
+    expectLogicalOnly();
+  });
+
+  it('Things: sort by says places keep their own order', async () => {
+    const { user } = await renderApp(`/p/${P.office}`);
+    await findHeading('Office');
+    await user.click(await screen.findByRole('button', { name: /^Display options/ }));
+    const sheet = await screen.findByRole('dialog', { name: 'Display' });
+    // The note describes the menu; the sort group's name stays its heading.
+    expect(within(sheet).getByRole('group', { name: 'Things: sort by' })).toBeInTheDocument();
+    expect(within(sheet).getByRole('menu')).toHaveAccessibleDescription(
+      'Places keep their own order.',
+    );
+  });
+
+  it('says nothing about places where there are none', async () => {
+    const { user } = await renderApp(`/p/${P.deskDrawer}`);
+    await findHeading('Desk drawer');
+    await user.click(await screen.findByRole('button', { name: /^Display options/ }));
+    const sheet = await screen.findByRole('dialog', { name: 'Display' });
+    expect(within(sheet).getByText('Things: sort by')).toBeInTheDocument();
+    expect(within(sheet).queryByText('Places keep their own order.')).toBeNull();
+  });
+});
+
 describe('place fields', () => {
   function withClosetFields(state = ownerScenario()) {
     for (const kinds of Object.values(state.inventory.placeKinds))
