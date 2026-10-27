@@ -8301,6 +8301,10 @@ msgstr "Objets trouvés"
 msgid "Things in the same location, by brand and model or by name."
 msgstr "Objets du même lieu, par marque et modèle ou par nom."
 
+#: src/components/history/labels.ts
+msgid "Things moved"
+msgstr "Objets déplacés"
+
 #: src/components/registries/registry-page.tsx
 msgid "Things show here when a purchase from here is recorded for them."
 msgstr "Les objets apparaissent ici lorsqu’un achat effectué ici est enregistré pour eux."
@@ -8634,8 +8638,8 @@ msgid "Turn on two-factor"
 msgstr "Activer la double authentification"
 
 #: src/components/history/labels.ts
-msgid "Turned {name} into a container"
-msgstr "Conversion de {name} en contenant"
+msgid "Turned {name} into a box"
+msgstr "Conversion de {name} en boîte"
 
 #: src/components/history/labels.ts
 msgid "Turned {name} into a place"

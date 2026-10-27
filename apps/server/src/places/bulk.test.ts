@@ -495,6 +495,114 @@ describe('POST /api/v1/places/:id/convert-children-to-containers', () => {
     expect(undoableActions()).toContain('place.convert_to_container');
   });
 
+  // #319: what Activity says after "Turn places into boxes…" and its Undo.
+  type Row = {
+    id: string;
+    action: string;
+    entity: { id: string | null };
+    diff: Record<string, unknown> | null;
+    undo_of: string | null;
+    undone?: true;
+    linkTo?: { type: string; id: string; shortCode: string | null };
+    summary: string;
+    summaryKey: string;
+  };
+  const activity = async (id: string) =>
+    (
+      await get<{ items: Row[] }>(`/api/v1/activity?locationId=${home.id}&limit=200`, ibrahim)
+    ).items.filter((e) => e.entity.id === id && e.action === 'place.convert_to_container');
+
+  it("#319: a conversion's row says it in words, a box, with none of the place's own columns", async () => {
+    const loft = await newPlace('Loft', null, 'room');
+    const trunk = await newPlace('Trunk', loft);
+    const chest = await newPlace('Chest', loft);
+    await own(db, `UPDATE public.places SET child_order = 'custom' WHERE id = $1`, [trunk]);
+    expect((await convertMany(loft, [trunk])).statusCode).toBe(200);
+    const single = await call(t, `/api/v1/places/${chest}/convert-to-container`, {
+      as: louis,
+      body: {},
+    });
+    expect(single.statusCode, single.body).toBe(200);
+    for (const [id, name] of [
+      [trunk, 'Trunk'],
+      [chest, 'Chest'],
+    ] as const) {
+      const [row] = await activity(id);
+      expect(row?.summary).toBe(`Turned ${name} into a box`);
+      // What the place was is the undo's to put back, not a change anyone made: no
+      // "Name → empty", "Kind zone → empty", "Order of the places inside name → empty".
+      expect(row?.diff ?? {}).toEqual({});
+    }
+    // The audit itself keeps it all, for the Undo.
+    const [stored] = (await eventsOf(db, home.id, trunk)).filter(
+      (e) => e.action === 'place.convert_to_container',
+    );
+    expect(stored?.diff).toMatchObject({
+      name: { before: 'Trunk' },
+      kind_key: { before: 'zone' },
+      child_order: { before: 'custom' },
+    });
+  });
+
+  it('#319: a conversion row links to the box it is now, and to the place again once undone', async () => {
+    const shed = await newPlace('Tool shed', null, 'room');
+    const crate = await newPlace('Seed crate', shed);
+    const tin = await newPlace('Paint tin', shed);
+    const { code } = ok(
+      await call(t, `/api/v1/places/${crate}/label`, { as: louis, body: {} }),
+    ) as unknown as { code: string };
+    const res = await convertMany(shed, [crate]);
+    expect(
+      (await call(t, `/api/v1/places/${tin}/convert-to-container`, { as: louis, body: {} }))
+        .statusCode,
+    ).toBe(200);
+    // The place's own page is gone: a link to /p/<id> lands on "not found".
+    expect(
+      (await call(t, `/api/v1/places/${crate}`, { as: louis, method: 'GET' })).statusCode,
+    ).toBe(404);
+    const tinBox = await get<{ shortCode: string | null }>(`/api/v1/things/${tin}`);
+    expect((await activity(crate))[0]?.linkTo).toEqual({
+      type: 'thing',
+      id: crate,
+      shortCode: code,
+    });
+    expect((await activity(tin))[0]?.linkTo).toEqual({
+      type: 'thing',
+      id: tin,
+      shortCode: tinBox.shortCode,
+    });
+
+    expect((await undoTogether(auditIds(res))).statusCode).toBe(200);
+    for (const row of await activity(crate)) expect(row.linkTo).toBeUndefined();
+  });
+
+  it('#319: after the one Undo, no conversion row offers Undo again, and the undo reads plainly', async () => {
+    const attic = await newPlace('Attic', null, 'room');
+    const caseA = await newPlace('Case A', attic);
+    const caseB = await newPlace('Case B', attic);
+    const res = await convertMany(attic, [caseA, caseB]);
+    const ids = auditIds(res);
+    expect(ids).toHaveLength(2);
+    for (const id of [caseA, caseB]) expect((await activity(id))[0]?.undone).toBeUndefined();
+
+    expect((await undoTogether(ids)).statusCode).toBe(200);
+    for (const [id, name] of [
+      [caseA, 'Case A'],
+      [caseB, 'Case B'],
+    ] as const) {
+      const rows = await activity(id);
+      const done = rows.find((e) => e.undo_of === null);
+      const undo = rows.find((e) => e.undo_of !== null);
+      // Already reversed: marked, so the row offers no Undo that would answer 409.
+      expect(done?.undone).toBe(true);
+      const again = await call(t, `/api/v1/audit/${done?.id}/undo`, { as: louis, body: {} });
+      expect(again.json()).toMatchObject({ code: 'undo_refused', reason: 'already_undone' });
+      expect(undo).toMatchObject({ summaryKey: 'undo', summary: `Undid a change to ${name}` });
+      expect(undo?.undone).toBeUndefined();
+      expect(undo?.diff ?? {}).toEqual({});
+    }
+  });
+
   it('chooses the box type when one is named', async () => {
     const study = await newPlace('Study', null, 'room');
     const drawer = await newPlace('Drawer', study);
