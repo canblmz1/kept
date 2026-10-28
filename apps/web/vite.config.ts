@@ -104,6 +104,8 @@ const HOUSEHOLD_SECTIONS = [
   // 1.x (D237): the location map, with three.js and its engine; its .glb models are plain assets
   // under assets/ (fingerprinted, a year's cache), never precached either (the glob below).
   '/src/map/map-view.tsx',
+  // #207: the graph view, its layouts and both pictures; its CSS goes with it (assetFileNames).
+  '/src/graph/graph-view.tsx',
 ];
 /** Route components (TanStack's split chunks) that read the server and load on demand. */
 const HOUSEHOLD_ROUTES = [
@@ -243,6 +245,14 @@ const ON_DEMAND_ENTRIES = [
   '/src/components/tags/editors.tsx',
   // 1.13.0 (#270): "Turn places into boxes" and a place's own order (places/sub-places-lazy.tsx).
   '/src/components/places/sub-places.tsx',
+  // #294: several things to the Trash at once (things/bulk-trash.tsx), from a place's Select and
+  // the spreadsheet; it reads and writes the server only.
+  '/src/components/things/bulk-trash.tsx',
+  // #296: one saved service, opened from a vehicle's Services tab (vehicles/services-tab.tsx).
+  '/src/components/services/service-sheet.tsx',
+  // #307: a move's contents sheets and "Printed OK?" after them (moving/sheets.tsx opens it); it
+  // reads and writes the server only.
+  '/src/components/moving/contents-sheets.tsx',
   '/papaparse/papaparse.min.js',
   '/src/components/import/parse-config.ts',
 ];
@@ -417,9 +427,13 @@ export default defineConfig({
     rolldownOptions: {
       output: {
         chunkFileNames: chunkFileName,
-        // driver.js's CSS goes with its chunk (ON_DEMAND_ENTRIES), and the map's with its own.
+        // driver.js's CSS goes with its chunk (ON_DEMAND_ENTRIES), and the map's and the graph's
+        // with their own.
         assetFileNames: (asset) =>
-          asset.names.some((n) => n.startsWith('driver-kit') || n.startsWith('map-view'))
+          asset.names.some(
+            (n) =>
+              n.startsWith('driver-kit') || n.startsWith('map-view') || n.startsWith('graph-view'),
+          )
             ? 'assets/household/[name]-[hash][extname]'
             : 'assets/[name]-[hash][extname]',
       },
