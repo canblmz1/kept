@@ -22,13 +22,17 @@ const PhotoViewer = lazy(() => import('./photo-viewer'));
 export const photoSrc = (photo: AttachmentView): string | null =>
   photo.file?.displayUrl ?? photo.file?.thumbUrl ?? null;
 
-/** Arrow keys and a swipe step through the photos; in Arabic both mirror. */
+/**
+ * Arrow keys and a swipe step through the photos; in Arabic both mirror. Keys held with Alt, Ctrl
+ * or Meta are the browser's (Alt+Left is Back in some).
+ */
 export function useSteps(go: (delta: number) => void, rtl: boolean) {
   const touch = useRef<number | null>(null);
   return {
-    onKey: (key: string) => {
-      if (key === 'ArrowLeft') go(rtl ? 1 : -1);
-      if (key === 'ArrowRight') go(rtl ? -1 : 1);
+    onKey: (e: Pick<KeyboardEvent, 'key' | 'altKey' | 'ctrlKey' | 'metaKey'>) => {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.key === 'ArrowLeft') go(rtl ? 1 : -1);
+      if (e.key === 'ArrowRight') go(rtl ? -1 : 1);
     },
     onTouchStart: (e: TouchEvent) => {
       touch.current = e.touches[0]?.clientX ?? null;
@@ -64,7 +68,7 @@ export function PhotoCarousel({ className }: { className?: string }) {
         aria-roledescription={t`carousel`}
         aria-label={t`Photos`}
         tabIndex={photos.length > 1 ? 0 : -1}
-        onKeyDown={(e) => steps.onKey(e.key)}
+        onKeyDown={steps.onKey}
         onTouchStart={steps.onTouchStart}
         onTouchEnd={steps.onTouchEnd}
         className={cn(
@@ -135,7 +139,7 @@ export function StepButtons({
         aria-label={t`Previous photo`}
         disabled={index === 0}
         onClick={() => go(-1)}
-        className="absolute start-1 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white outline-none disabled:opacity-0 focus-visible:outline-2 focus-visible:outline-info"
+        className="absolute start-1 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white outline-none disabled:opacity-0 focus-visible:outline-2 focus-visible:outline-info"
       >
         <ChevronStartIcon />
       </button>
@@ -144,7 +148,7 @@ export function StepButtons({
         aria-label={t`Next photo`}
         disabled={index === count - 1}
         onClick={() => go(1)}
-        className="absolute end-1 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white outline-none disabled:opacity-0 focus-visible:outline-2 focus-visible:outline-info"
+        className="absolute end-1 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-white outline-none disabled:opacity-0 focus-visible:outline-2 focus-visible:outline-info"
       >
         <ChevronEndIcon />
       </button>

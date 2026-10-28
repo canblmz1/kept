@@ -2,11 +2,12 @@
  * A thing's photo full screen (#295), opened by tapping the header's photo. `React.lazy`
  * (./photos), so it loads only when someone opens it (D80); it's a precached chunk all the same,
  * so it opens offline, on the same image the header shows. Fitted to the screen, or its full size
- * to pan around after Zoom in or a double-click; a pinch on a phone is the browser's own zoom.
+ * to pan around, centred, after Zoom in or a double-click; zoomed in, the photo takes focus and the
+ * arrow keys scroll it. A pinch on a phone is the browser's own zoom.
  * The header's moves step through the photos, and Escape or Back (CloseOnBack) close it.
  */
 import { useLingui } from '@lingui/react/macro';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Button as ButtonPrimitive,
   Dialog as DialogPrimitive,
@@ -36,19 +37,29 @@ export default function PhotoViewer({
   const { t } = useLingui();
   const fmt = useFormat();
   const [zoomed, setZoomed] = useState(false);
+  const stage = useRef<HTMLDivElement>(null);
   const step = (delta: number) => {
     setZoomed(false);
     go(delta);
   };
   const steps = useSteps(step, rtl);
   // Focus starts on the dialog itself, above any child's onKeyDown, so the keys are read here.
+  // Zoomed in, the arrows are left to scroll the photo.
   const onKey = useRef(steps.onKey);
-  onKey.current = steps.onKey;
+  onKey.current = zoomed ? () => {} : steps.onKey;
   useEffect(() => {
-    const listener = (e: KeyboardEvent) => onKey.current(e.key);
+    const listener = (e: KeyboardEvent) => onKey.current(e);
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
   }, []);
+  // Zooming in starts in the middle of the photo (scrollLeft runs negative in Arabic), with focus.
+  useLayoutEffect(() => {
+    const el = stage.current;
+    if (!zoomed || !el) return;
+    el.scrollLeft = ((rtl ? -1 : 1) * (el.scrollWidth - el.clientWidth)) / 2;
+    el.scrollTop = (el.scrollHeight - el.clientHeight) / 2;
+    el.focus({ preventScroll: true });
+  }, [zoomed, rtl]);
   const src = photoSrc(photos[index] as AttachmentView);
   const label = t`Photo ${fmt.num(index + 1)} of ${fmt.num(photos.length)}`;
   const control =
@@ -71,12 +82,16 @@ export default function PhotoViewer({
         >
           {/* biome-ignore lint/a11y/noStaticElementInteractions: swipe and double-click are pointer enhancements; Previous, Next and Zoom in are the accessible path */}
           <div
+            ref={stage}
+            tabIndex={zoomed ? 0 : -1}
             onTouchStart={zoomed ? undefined : steps.onTouchStart}
             onTouchEnd={zoomed ? undefined : steps.onTouchEnd}
             onDoubleClick={() => setZoomed((z) => !z && !!src)}
             className={cn(
-              'size-full',
-              zoomed ? 'cursor-zoom-out overflow-auto' : 'grid place-items-center overflow-hidden',
+              'size-full outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-info',
+              zoomed
+                ? 'flex cursor-zoom-out overflow-auto'
+                : 'grid place-items-center overflow-hidden',
               src && !zoomed && 'cursor-zoom-in',
             )}
           >
@@ -84,7 +99,7 @@ export default function PhotoViewer({
               <img
                 src={src}
                 alt={label}
-                className={zoomed ? 'max-w-none' : 'size-full object-contain'}
+                className={zoomed ? 'm-auto max-w-none shrink-0' : 'size-full object-contain'}
               />
             ) : (
               <div className="rounded-xl bg-surface p-4">
