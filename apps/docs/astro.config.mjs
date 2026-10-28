@@ -158,6 +158,7 @@ const sidebar = [
     page('developers/architecture'),
     page('developers/monorepo'),
     page('developers/local-setup'),
+    page('developers/contributing'),
     page('developers/data-model'),
     page('developers/rls'),
     page('developers/migrations'),
